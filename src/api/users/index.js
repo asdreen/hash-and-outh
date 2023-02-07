@@ -1,6 +1,7 @@
 import express from "express";
 import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
 import { basicAuthMiddleware } from "../../lib/auth/basicAuth.js";
+import BlogPostModel from "../blogPosts/model.js";
 import UsersModel from "./model.js";
 
 const usersRouter = express.Router();
@@ -18,7 +19,7 @@ usersRouter.post("/", async (req, res, next) => {
 usersRouter.get(
   "/",
   basicAuthMiddleware,
-  adminOnlyMiddleware,
+
   async (req, res, next) => {
     try {
       const users = await UsersModel.find({});
@@ -32,6 +33,18 @@ usersRouter.get(
 usersRouter.get("/me", basicAuthMiddleware, async (req, res, next) => {
   try {
     res.send(req.user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET ME STORIES
+
+usersRouter.get("/me/stories", async (req, res, next) => {
+  try {
+    const blogPosts = await BlogPostModel.find({ authors: req.author._id });
+
+    res.send(blogPosts);
   } catch (error) {
     next(error);
   }

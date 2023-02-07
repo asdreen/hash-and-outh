@@ -19,13 +19,4 @@ const blogPostSchema = new Schema(
   }
 );
 
-blogPostSchema.static("findBlogPostsWithUsers", async function (query) {
-  const total = await this.countDocuments(query.criteria);
-  const blogPosts = await this.find(query.criteria, query.options.fields)
-    .limit(query.options.limit)
-    .skip(query.options.skip)
-    .sort(query.options.sort);
-  return { blogPosts, total };
-});
-
 export default model("BlogPost", blogPostSchema);

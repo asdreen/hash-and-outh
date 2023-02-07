@@ -29,34 +29,11 @@ blogPostsRouter.get("/", async (req, res, next) => {
   }
 });
 
-// GET POSTS WITH AUTHOR
-
-blogPostsRouter.get("/", async (req, res, next) => {
-  try {
-    const mongoQuery = q2m(req.query);
-
-    const { blogPosts, total } = await BlogPostModel.findBlogPostsWithAuthors(
-      mongoQuery
-    );
-
-    res.send({
-      links: mongoQuery.links("http://localhost:3001/blogPosts", total),
-      total,
-      totalPages: Math.ceil(total / mongoQuery.options.limit),
-      blogPosts,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // GET SPECIFIC
 
 blogPostsRouter.get("/:blogPostId", async (req, res, next) => {
   try {
-    const blogPost = await BlogPostModel.findById(
-      req.params.blogPostId
-    ).populate({ path: "authors", select: "name surname avatar" });
+    const blogPost = await BlogPostModel.findById(req.params.blogPostId);
     if (blogPost) {
       res.send(blogPost);
     } else {
@@ -73,7 +50,7 @@ blogPostsRouter.get("/:blogPostId", async (req, res, next) => {
 
 blogPostsRouter.put(
   "/:blogPostId",
-  basicAuthMiddleware,
+
   async (req, res, next) => {
     try {
       const updatedBlogPost = await BlogPostModel.findByIdAndUpdate(
@@ -102,7 +79,7 @@ blogPostsRouter.put(
 
 blogPostsRouter.delete(
   "/:blogPostId",
-  basicAuthMiddleware,
+
   async (req, res, next) => {
     try {
       const deletedBlogPost = await BlogPostModel.findByIdAndDelete(

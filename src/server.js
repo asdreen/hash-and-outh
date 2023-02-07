@@ -2,7 +2,7 @@ import express from "express";
 import listEndpoints from "express-list-endpoints";
 import mongoose from "mongoose";
 import cors from "cors";
-//import usersRouter from "./api/users/index.js";
+import usersRouter from "./api/users/index.js";
 import blogPostsRouter from "./api/blogPosts/index.js";
 import {
   forbiddenErrorHandler,
@@ -19,7 +19,7 @@ server.use(cors());
 server.use(express.json());
 
 // ****************************** ENDPOINTS ****************************
-//server.use("/users", usersRouter);
+server.use("/users", usersRouter);
 server.use("/blogPosts", blogPostsRouter);
 
 // *************************** ERROR HANDLERS **************************

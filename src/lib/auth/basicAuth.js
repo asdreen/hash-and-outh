@@ -1,6 +1,6 @@
 import createHttpError from "http-errors";
 import atob from "atob";
-//import UsersModel from "../../api/users/model.js";
+import UsersModel from "../../api/users/model.js";
 
 export const basicAuthMiddleware = async (req, res, next) => {
   // 1. Check if Authorization header is provided, if it is not --> trigger an error (401)
