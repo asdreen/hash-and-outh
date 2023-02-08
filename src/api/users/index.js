@@ -1,10 +1,17 @@
 import express from "express";
+import createHttpError from "http-errors";
 import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
-import { basicAuthMiddleware } from "../../lib/auth/basicAuth.js";
+import { JWTAuthMiddleware } from "../../lib/auth/jwtAuth.js";
 import BlogPostModel from "../blogPosts/model.js";
 import UsersModel from "./model.js";
+import {
+  createTokens,
+  verifyRefreshAndCreateNewTokens,
+} from "../../lib/auth/tools.js";
 
 const usersRouter = express.Router();
+
+// POST
 
 usersRouter.post("/", async (req, res, next) => {
   try {
@@ -16,9 +23,11 @@ usersRouter.post("/", async (req, res, next) => {
   }
 });
 
+// GET
+
 usersRouter.get(
   "/",
-  basicAuthMiddleware,
+  JWTAuthMiddleware,
 
   async (req, res, next) => {
     try {
@@ -30,7 +39,9 @@ usersRouter.get(
   }
 );
 
-usersRouter.get("/me", basicAuthMiddleware, async (req, res, next) => {
+//GET ME
+
+usersRouter.get("/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     res.send(req.user);
   } catch (error) {
@@ -50,7 +61,9 @@ usersRouter.get("/me/stories", async (req, res, next) => {
   }
 });
 
-usersRouter.put("/me", basicAuthMiddleware, async (req, res, next) => {
+// PUT ME
+
+usersRouter.put("/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const updatedUser = await UsersModel.findByIdAndUpdate(
       req.user._id,
@@ -66,7 +79,9 @@ usersRouter.put("/me", basicAuthMiddleware, async (req, res, next) => {
   }
 });
 
-usersRouter.delete("/me", basicAuthMiddleware, async (req, res, next) => {
+// DELETE ME
+
+usersRouter.delete("/me", JWTAuthMiddleware, async (req, res, next) => {
   try {
     await UsersModel.findByIdAndUpdate(req.user._id);
     res.status(204).send();
@@ -75,7 +90,9 @@ usersRouter.delete("/me", basicAuthMiddleware, async (req, res, next) => {
   }
 });
 
-usersRouter.get("/:userId", basicAuthMiddleware, async (req, res, next) => {
+// GET SPECIFIC
+
+usersRouter.get("/:userId", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const user = await UsersModel.findById(req.params.userId);
     res.send(user);
@@ -83,9 +100,12 @@ usersRouter.get("/:userId", basicAuthMiddleware, async (req, res, next) => {
     next(error);
   }
 });
+
+// PUT
+
 usersRouter.put(
   "/:userId",
-  basicAuthMiddleware,
+  JWTAuthMiddleware,
   adminOnlyMiddleware,
   async (req, res, next) => {
     try {
@@ -95,9 +115,11 @@ usersRouter.put(
   }
 );
 
+// DELETE
+
 usersRouter.delete(
   "/:userId",
-  basicAuthMiddleware,
+  JWTAuthMiddleware,
   adminOnlyMiddleware,
   async (req, res, next) => {
     try {
@@ -106,5 +128,61 @@ usersRouter.delete(
     }
   }
 );
+
+// LOGIN TOKEN
+
+usersRouter.post("/login", async (req, res, next) => {
+  try {
+    // 1. Obtain the credentials from req.body
+    const { email, password } = req.body;
+
+    // 2. Verify the credentials
+    const user = await UsersModel.checkCredentials(email, password);
+
+    if (user) {
+      // 3.1 If credentials are fine --> generate an access token (JWT) and a refresh token and send them back as a response
+      const { accessToken, refreshToken } = await createTokens(user);
+      res.send({ accessToken, refreshToken });
+    } else {
+      // 3.2 If credentials are NOT fine --> trigger a 401 error
+      next(createHttpError(401, "Credentials are not ok!"));
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// REFRESH TOKEN
+
+usersRouter.post("/refreshTokens", async (req, res, next) => {
+  try {
+    const { currentRefreshToken } = req.body;
+
+    const { accessToken, refreshToken } = await verifyRefreshAndCreateNewTokens(
+      currentRefreshToken
+    );
+
+    res.send({ accessToken, refreshToken });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// REGISTER TOKEN
+
+usersRouter.post("/register", async (req, res, next) => {
+  try {
+    const newUserPre = {
+      ...req.body,
+      avatar: `https://ui-avatars.com/api/?name=${req.body.name}+${req.body.surname}`,
+    };
+    const newUser = new UsersModel(newUserPre);
+    const { _id } = await newUser.save();
+
+    res.status(201).send({ _id });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default usersRouter;
