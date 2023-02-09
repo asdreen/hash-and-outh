@@ -4,10 +4,8 @@ import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
 import { JWTAuthMiddleware } from "../../lib/auth/jwtAuth.js";
 import BlogPostModel from "../blogPosts/model.js";
 import UsersModel from "./model.js";
-import {
-  createTokens,
-  verifyRefreshAndCreateNewTokens,
-} from "../../lib/auth/tools.js";
+import passport from "passport";
+import { createAccessToken } from "../../lib/auth/tools.js";
 
 const usersRouter = express.Router();
 
@@ -39,6 +37,24 @@ usersRouter.get(
   }
 );
 
+// GET GOOGLE LOGIN
+usersRouter.get(
+  "/googleLogin",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+// The purpose of this endpoint is to redirect users to Google Consent Screen
+
+// GET GOOGLE REDIRECT
+
+usersRouter.get(
+  "/googleRedirect",
+  passport.authenticate("google", { session: false }),
+  async (req, res, next) => {
+    console.log(req.user);
+    res.redirect(`${process.env.FE_URL}?accessToken=${req.user.accessToken}`);
+  }
+);
+
 //GET ME
 
 usersRouter.get("/me", JWTAuthMiddleware, async (req, res, next) => {
@@ -54,7 +70,7 @@ usersRouter.get("/me", JWTAuthMiddleware, async (req, res, next) => {
 
 usersRouter.get("/me/stories", async (req, res, next) => {
   try {
-    const blogPosts = await BlogPostModel.find({ authors: req.author._id });
+    const blogPosts = await BlogPostModel.find({ users: req.user._id });
 
     res.send(blogPosts);
   } catch (error) {
@@ -142,8 +158,10 @@ usersRouter.post("/login", async (req, res, next) => {
 
     if (user) {
       // 3.1 If credentials are fine --> generate an access token (JWT) and a refresh token and send them back as a response
-      const { accessToken, refreshToken } = await createTokens(user);
-      res.send({ accessToken, refreshToken });
+      const payload = { _id: user._id, role: user.role };
+
+      const accessToken = await createAccessToken(payload);
+      res.send({ accessToken });
     } else {
       // 3.2 If credentials are NOT fine --> trigger a 401 error
       next(createHttpError(401, "Credentials are not ok!"));

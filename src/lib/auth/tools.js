@@ -18,7 +18,7 @@ export const createTokens = async (user) => {
   return { accessToken, refreshToken };
 };
 
-const createAccessToken = (payload) =>
+export const createAccessToken = (payload) =>
   new Promise((resolve, reject) =>
     jwt.sign(
       payload,
